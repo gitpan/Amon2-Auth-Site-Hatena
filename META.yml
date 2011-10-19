@@ -19,6 +19,9 @@ no_index:
     - inc
     - t
     - xt
+recommends:
+  HTTP::BrowserDetect: 1.33
+  HTTP::MobileAgent: 0
 requires:
   Amon2::Auth: 0.01
   JSON: 2.53
@@ -26,4 +29,4 @@ requires:
   OAuth::Lite: 1.31
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.01
+version: 0.02
