@@ -4,8 +4,9 @@ use Mouse;
 use JSON;
 use OAuth::Lite::Token;
 use OAuth::Lite::Consumer;
+use Woothee;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 has consumer_key => (
     is       => 'ro',
@@ -98,40 +99,13 @@ __PACKAGE__->meta->make_immutable;
 
 sub moniker { 'hatena' }
 
-BEGIN {
-    eval { require 'HTTP::MobileAgent' };
-    if ($@) {
-        *is_mobile = sub { 0 }
-    }
-    else {
-        *is_mobile = sub {
-            my ($self, $c) = @_;
-            my $agent = HTTP::MobileAgent->new($c->req->headers);
-              !$agent->is_non_mobile;
-        }
-    }
-
-    eval { require 'HTTP::BrowserDetect' };
-    if ($@) {
-        *is_touch = sub { 0 }
-    }
-    else {
-        *is_touch = sub {
-            my ($self, $c) = @_;
-            my $detect = HTTP::BrowserDetect->new(
-                $c->req->env->{'HTTP_USER_AGENT'}
-            );
-            !!$detect->mobile;
-        }
-    }
-}
-
 sub detect_authorize_url_from {
     my ($self, $c) = @_;
-    my $url = $self->authorize_url;
-       $url = $self->is_touch($c)  ? $self->authorize_url_touch  : $url;
-       $url = $self->is_mobile($c) ? $self->authorize_url_mobile : $url;
-       $url;
+
+    my $category = Woothee->parse($c->req->env->{'HTTP_USER_AGENT'})->{category};
+    $category eq 'smartphone'  ? $self->authorize_url_touch  :
+    $category eq 'mobilephone' ? $self->authorize_url_mobile :
+                                 $self->authorize_url        ;
 }
 
 sub auth_uri {
@@ -187,7 +161,7 @@ sub callback {
     $callback->{on_finished}->(@args);
 }
 
-!!1;
+1;
 
 __END__
 
@@ -195,7 +169,7 @@ __END__
 
 =head1 NAME
 
-Amon2::Auth::Site::Hatena - Hatena auth integration for Amon2
+Amon2::Auth::Site::Hatena - Hatena authentication integration for Amon2
 
 =head1 SYNOPSIS
 
@@ -246,7 +220,7 @@ users authenticate via Hatena OAuth API using this module.
 
 =item comsumer_secret (required)
 
-=item scope (Default: [qw(read_public)])
+=item scope (Default: C<[qw(read_public)]>)
 
 API scope in ArrayRef.
 
@@ -262,12 +236,12 @@ If true, this module fetch user data immediately after authentication.
 
 =over 4
 
-=item $auth->auth_uri($c:Amon2::Web, $callback_uri:Str) : Str
+=item C<< $auth->auth_uri($c:Amon2::Web, $callback_uri:Str) >> : Str
 
 Returns an authenticate URI according to C<$ENV{HTTP_USER_AGENT}>. It
-can be one of three for PC, smartphone, and JP cellphone.
+can be one of three for PC, smart phone, and JP cell phone.
 
-=item $auth->callback($c:Amon2::Web, $callback:HashRef) : Plack::Response
+=item C<< $auth->callback($c:Amon2::Web, $callback:HashRef) >> : Plack::Response
 
 Process the authentication callback dispatching.
 
